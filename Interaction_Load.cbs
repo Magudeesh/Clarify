@@ -1,0 +1,380 @@
+'***********************************************************************************************************
+'     ********Module created by Magu for creating interection for  ROP Leads Interaction **********
+'***********************************************************************************************************
+Option Explicit
+
+Declare Function locStr( inputStr As String ) As String
+Declare Function Utils3_Localizing_Strings( inputStr As String ) As String
+Declare Function Dateformatting( inputStr As String ) As String
+Declare Sub LoadProgram( strReadFile As String, strErrorFile As String, strLogFile As String) 
+Declare Sub ReadAndParse 
+Dim strReadFile As String
+Dim strErrorFile As String
+Dim strLogFile as String
+Dim Errorcnt As Integer
+Dim LineCnt As Integer
+
+Sub LoadProgram( strReadFile As String, strErrorFile As String, strLogFile As String  )
+
+        
+	Open strErrorFile For Output As #2	
+	If FileExists(strErrorFile) Then		
+	     Write #2, "Process Start Date & Time : " & app.CurrentDate
+	Else
+	     Write #2, "Error File not found"
+	End if
+
+	Open strLogFile For Output As #3
+	If FileExists(strLogFile) Then		
+	     Write #3, "Process Start Date & Time : " & app.CurrentDate
+	Else
+	     Write #3, "Error File not found"
+	End if
+
+	
+	if FileExists(strReadFile) Then
+	     Open strReadFile For Input as #1
+	     Call ReadAndParse
+ 	     Write #3, "Process Completed: " & app.CurrentDate
+	     Write #2, "No of Records created: " & LineCnt-Errorcnt
+	     Write #2, "No of error records:  "& Errorcnt 
+	Else 
+	     Write #2, "Input Flat File not found"
+	End If
+
+
+
+ 	Close #1
+	Close #2
+	Close #3
+
+	Reset
+
+End Sub
+
+Sub ReadAndParse 
+	On Error GoTo Error_ReadWriteandParse
+	Dim stragentcode     	    As String   			
+	Dim strLName 		        As String
+	Dim strFName 		        As String
+	Dim strPhone 		        As String
+	Dim strFax   		        As String
+	Dim strEmail  	     	    As String
+	Dim strZip    	     	    As String
+	Dim strType 		        As String
+	Dim mod_objid 	     	    As String
+	Dim strPolicyNo      	    As String
+	Dim siteid 		            As String	
+	Dim strLine 		        As String
+	dim strdesc	                As String 
+	Dim createdate 	     	    As String 
+  	Dim strinteracttile   	    As String 
+	Dim strcountry		        As String                                                                                                          
+	Dim strCallDirection        As String
+	Dim strInteractionNote      As String
+	Dim strproduct              As String
+	dim strtempInteractionNote  as string
+	Dim lngcompcode	            As Long 
+	Dim ConObjid         	    As Long 
+	Dim mylist 		            As New list
+	Dim lstMod 		            As New list
+	Dim lstContact 	     	    As New list
+    dim Intlist	                as new list
+	Dim recContact 	 	        As New Record
+	Dim recModLevel  	        As New Record
+	dim recinteracttext         as new record
+	Dim recSite 		        As New record
+	Dim recSvcPart 	   	        As New Record
+	Dim MyRec 		            As New Record
+    Dim recinteract   	        As new record
+	Dim MyBulk 		            As New BulkSave 
+	Dim IntBulk 		        As New BulkRetrieve
+
+
+	
+	myrec.RecordType            = "interact"
+	recinteracttext.RecordType  = "interact_txt"
+	
+Looper:	
+
+	Do While Not EOF(1) 
+		Line Input #1, strLine
+		On Error GoTo Error_ReadWriteandParse
+	 	LineCnt = LineCnt + 1     
+		
+		'initialize 
+		siteid                =""
+		strinteracttile       =""
+		createdate            =""
+		strdesc               =""
+		stragentcode          =""
+		strCallDirection      =""
+		strType               =""
+		strproduct            =""
+		strpolicyno           =""
+		strInteractionNote    =""
+		strtempInteractionNote=""
+		lngcompcode           =0
+		strFName              =""
+		strLName              =""
+		strPhone              =""
+		strZip                =""  
+		strcountry            =""
+
+'**********************************************'Formatinputfile ****************************************************************************
+'Format inputfile                                                                                                                          
+'Customer ID~Interaction Title~Interaction create date~Interaction Reason~Created by~Call Direction~Type~Product~Policy~Interaction Notes
+'  ~Companycode  
+'**********************************************Layout End***********************************************************************************
+'1.Customer ID---------------- Mandatory Value which is provided in  the file  															   *                                                                                                 
+'2.Interaction Title---------- Mandatory Value which is provided in  the file                                                              *                                                 
+'3.Interaction create date---- Non Mandatory value  Default=Jobrun date                                                                    *
+'4.Interaction Reason--------- Mandatory Value which is provided in  the file                                                              *
+'5.Created by----------------- Non Mandatory Value which is provided in  the file default = System Generated                               *           
+'6.Call Direction------------- Non Mandatory Value which is provided in  the file default = Outbound                                       *
+'7.Type----------------------- Non Mandatory Value which is provided in  the file default = Mail                                           *
+'8.Product-------------------- Non Mandatory Value which is provided in  the file default = NONE                                           *
+'9.Policy--------------------- Non Mandatory Value which is provided in  the file default =''                                              *                 
+'10.Interaction Notes--------- Non Mandatory Value provided in file it includes the policy number other than the policy number             *                                                   
+'                              mentioned in 8th column along with the other notes			                                               *    
+'11.Companycode--------------- Non Mandatory Value provided in file  then default = 01 (CICA)                                              *                                                                                                 
+'*******************************************************************************************************************************************
+		'***Modify positions here****
+		siteid                =  trim(item$(strline,1,1,"~"))
+		strinteracttile       =  trim(item$(strline,2,2,"~")) 
+		createdate            =  trim(item$(strline,3,3,"~"))
+		strdesc               =  trim(item$(strline,4,4,"~"))
+		stragentcode          =  trim(item$(strline,5,5,"~"))
+		strCallDirection      =  trim(item$(strline,6,6,"~"))
+		strType               =  trim(item$(strline,7,7,"~"))
+		strproduct            =  trim(item$(strline,8,8,"~"))
+        strpolicyno           =  trim(item$(strline,9,9,"~")) 		
+		strtempInteractionNote=  trim(item$(strline,10,10,"~")) 
+ 		lngcompcode           =  trim(item$(strline,11,11,"~"))
+		
+    
+	  	If trim(siteid)="" then
+			GoTo looper
+		End if   
+		
+		Print #2,"Customer ID Found at the line number " & LineCnt
+ 	  	
+			If Len(siteid) = 10 then 					'worksite customer ID 
+				If Mid$(siteid,1,2)="88" then
+					siteid = "W8"&Mid$(siteid,4,8)
+					
+				Else 
+					If Mid$(siteid,1,2)="90" then
+						siteid = "W9"&Mid$(siteid,4,8)
+							
+					Else
+						siteid = "W0"&Mid$(siteid,4,8)
+						
+					End If
+				End If
+			End if
+		
+		Print #2,"Customer ID Found at the line number " & LineCnt
+		
+	  	If Trim(createdate) = "" then
+	     	
+	     		createdate=app.currentdate
+	    End if
+		Print #2,"No Issue with Date formatting at the line number " & LineCnt
+
+		If Trim(stragentcode) = "" Then
+			stragentcode = "System Generated"
+		End If
+		
+		If Trim(strCallDirection) = "" Then
+			strCallDirection = "Outbound"
+		End If
+		
+		If Trim(strType) = "" Then
+			strType = "Mail"
+		End If
+		
+		If Trim(lngcompcode) =06 or Trim(lngcompcode) =02  Then
+			strcountry="CANADA"
+		Else
+ 			strcountry="USA"			
+		End If
+
+        if 	trim(strtempInteractionNote)<>"" then
+		    if instr(strtempInteractionNote,"|") > 0 then
+               strInteractionNote=trim(trim(mid(strtempInteractionNote,1,instr(strtempInteractionNote,"|")-1))& " " & trim(mid(strtempInteractionNote,instr(strtempInteractionNote,"|")+1,len(strtempInteractionNote))))
+			else
+			   strInteractionNote=trim(strtempInteractionNote)
+			end if
+	    end if
+		
+	    
+
+				
+		'retrieve related contact
+		intbulk.clear
+		intBulk.SimpleQuery  0, "rol_contct"
+		intBulk.AppendFilter 0, "site_id", cbequal, siteid
+		intBulk.AppendFilter 0, "country", cbEqual, strcountry      
+		intbulk.RetrieveRecords    	
+		Set myList = intBulk.GetRecordList(0)
+		If myList.count > 0 Then
+		    Set recSite   = mylist.ItemByIndex(0)		
+			    ConObjid  = recSite.GetField("con_objid")  				  	 		
+	
+			intBulk.SimpleQuery  0, "contact"
+			intBulk.AppendFilter 0, "objid", cbequal, ConObjid
+			intbulk.RetrieveRecords  
+			Set lstContact = intBulk.GetRecordList(0)
+	
+			If lstContact.Count>0 Then
+			   Set recContact = lstContact.ItemByIndex(0)			
+	 			    strLname=recContact.GetField("last_name")
+	 			    strFname=recContact.GetField("first_name")
+	 			    If trim(strPhone)="" then
+				      strPhone=recContact.GetField("phone")
+				    End if 
+				    strFax=recContact.GetField("fax_number")
+				    strEmail=recContact.GetField("e_mail")
+				    strZip=recContact.GetField("zipcode")		
+			Else            
+	            Write #2, LineCnt & "-" & "Contact Not Found - " & SiteId
+	            Print #3, strLine
+                    Errorcnt = Errorcnt + 1
+	            GoTo Looper			
+			End If
+			
+	        Else
+	            Write #2, LineCnt & "-" & "Site Not Found - " & SiteId 
+ 		    Print #3, strLine
+                    Errorcnt = Errorcnt + 1
+	            GoTo Looper			
+		End If	 	 
+									 			
+		MyRec.SetField "interact_id"     ,  App.GenerateID(locStr("Interaction ID") )
+		MyRec.SetField "create_date"     ,  createdate
+		MyRec.SetField "start_date"      ,  createdate
+		MyRec.SetField "end_date"        ,  createdate
+		MyRec.SetField "reason_1"        ,  trim(strdesc)
+		MyRec.SetField "title"           ,  trim(strinteracttile)
+		MyRec.SetField "product"         ,  trim(strproduct)
+		MyRec.SetField "x_policy_no"     ,  Trim(strpolicyno)
+        recinteracttext.SetField "notes" ,  Trim(strInteractionNote)		
+		MyRec.SetField "direction"       ,  Trim(strCallDirection)
+		MyRec.SetField "inserted_by"     ,  trim(stragentcode)
+		MyRec.SetField "type"            ,  trim(strType)
+		MyRec.SetField "agent"           ,  trim(stragentcode)
+ 		MyRec.SetField "x_premium_amount",  0.00  
+		MyRec.SetField "external_id"     ,  ""
+		MyRec.SetField "origin"          ,  "None"   
+		if itemcount(strline,"~")=13 then
+		  MyRec.SetField "x_caller_type" , strPhone
+		End if 
+		MyRec.SetField "fee_based"       , 0
+		MyRec.SetField "wait_time"       , 0
+		MyRec.SetField "entered_time"    , 0
+		MyRec.SetField "pay_option"      , "None"
+		MyRec.SetField "last_name"       , strLName
+		MyRec.SetField "first_name"      , strFName
+		MyRec.SetField "phone"           , strPhone
+		MyRec.SetField "fax_number"      , strFax
+		MyRec.SetField "email"           , strEmail
+		MyRec.SetField "zipcode"         , strZip
+		   
+		'retrieve the related mod_level record
+	  	If trim(strpolicyno) <> "" Then
+	
+			Intbulk.SimpleQuery  0, "svc_part_view"
+			Intbulk.AppendFilter 0, "serial_no", cbequal, strPolicyNo
+			Intbulk.AppendFilter 0, "domain", cbequal, "Policies"
+			If Trim(lngcompcode) =06 or Trim(lngcompcode) =02  Then
+				Intbulk.AppendFilter 0, "x_service_center_code", cbEqual, "02"      
+			Else
+				Intbulk.AppendFilter 0, "x_service_center_code", cbNotEqual, "02"      
+			End if
+			Intbulk.RetrieveRecords
+	
+	   		Set Intlist = Intbulk.GetRecordList(0)
+	
+	   		If Intlist.count > 0 Then
+				Set recSvcPart = Intlist.ItemByIndex(0)
+				mod_objid = recSvcPart.GetField("mod_objid")    	
+				Intbulk.SimpleQuery  0, "mod_level"
+				Intbulk.AppendFilter 0, "objid", cbequal, Mod_objid
+				Intbulk.RetrieveRecords
+				Set lstMod = Intbulk.GetRecordList(0)
+				If lstMod.count > 0 Then
+	   	   			Set recModLevel = lstMod.ItemByIndex(0)
+	       			End If       			
+			End If
+		End If 
+		
+	  	'save interaction
+		MyBulk.InsertRecord MyRec
+		if trim(strpolicyno)<>"" Then
+			MyBulk.InsertRecord recinteracttext
+			MyBulk.RelateRecords  recinteracttext,MyRec,  "interact_txt2interact"
+		End if
+		
+		If lstContact.Count >0 Then 
+	 		MyBulk.RelateRecords MyRec, recContact,  "interact2contact"
+		End If
+		If lstMod.Count > 0 Then
+	 		MyBulk.RelateRecords MyRec, recModLevel,  "interact2mod_level"
+		End If
+		MyBulk.Save
+	  	
+	Loop
+	Exit Sub 
+
+Error_ReadWriteandParse :
+	Errorcnt = Errorcnt + 1
+	Write #2, err.Number & "-" & err.Description & " " & "line number is " & Strline
+	Resume Looper
+End Sub
+
+'******************************************************************************
+'** Function Dateformatting( inputStr As String ) As String			     **
+'**  Format date													
+'** end function 							     **
+'******************************************************************************
+Function Dateformatting( inputStr As String) As String
+	Dim stryr
+	Dim strmnth
+	Dim strday
+	dim strdte
+	stryr=trim(Mid(inputStr,1,4))
+	strmnth=trim(Mid(inputStr,5,2))
+	strday=trim(Mid(inputStr,7,2))
+	strdte=strmnth & "/" & strday & "/"& stryr
+        Dateformatting=format(cdate(strdte),"mm/dd/yyyy")
+End Function
+
+'******************************************************************************
+'** Function locStr( inputStr As String ) As String			     **
+'**  generate interact id													
+'** end function 							     **
+'******************************************************************************
+Function locStr( inputStr As String ) As String
+         locStr = Utils3_Localizing_Strings( inputStr )
+End Function
+
+Function Utils3_Localizing_Strings( inputStr As String ) As String
+
+	Dim string_title As String, string_id As Long
+	string_id = -1
+	Utils3_Localizing_Strings = inputStr
+	Select Case inputStr
+	Case "Interaction ID" 
+		String_id = 30512  
+	Case Else
+	End Select
+	If string_id > 0 Then
+		If App.getstring ( string_id, string_title ) = TRUE Then 
+			If string_title = "" Then Exit Function
+			Utils3_Localizing_Strings = string_title
+		End If
+	End If
+End Function
+
+
