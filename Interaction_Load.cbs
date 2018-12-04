@@ -378,3 +378,4 @@ Function Utils3_Localizing_Strings( inputStr As String ) As String
 End Function
 
 
+'Magu test 1
